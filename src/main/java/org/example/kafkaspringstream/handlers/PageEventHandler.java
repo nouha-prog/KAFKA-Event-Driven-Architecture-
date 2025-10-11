@@ -23,57 +23,38 @@ import org.apache.kafka.streams.KeyValue; // Add this import
 
 @Component
 public class PageEventHandler {
-
     @Bean
-    public Consumer<Message<PageEvent>> pageEventConsumer() {
-        return (input) -> {
-            System.out.println("*******************");
-            System.out.println(input.getPayload());
-            System.out.println("*****************");
+    public Consumer<PageEvent> pageEventConsumer(){
+        return (input)->{
+            System.out.println("************");
+            System.out.println(input.toString());
+            System.out.println("************");
         };
     }
 
     @Bean
-    public Supplier<PageEvent> pageEventSupplier() {
-        return () -> {
+    public Supplier<PageEvent> pageEventSupplier(){
+        return ()->{
             return new PageEvent(
-                    Math.random() > 0.5 ? "P1" : "P2",
-                    Math.random() > 0.5 ? "U1" : "U2",
+                    Math.random()>0.5?"P1":"P2",
+                    Math.random()>0.5?"U1":"U2",
                     new Date(),
-                    10 + new Random().nextInt(10000)
+                    10+new Random().nextInt(10000)
             );
         };
     }
 
     @Bean
-    public Supplier<Message<PageEvent>> fluxSupplier() {
-        return () -> {
-            PageEvent pageEvent = new PageEvent(
-                    Math.random() > 0.5 ? "P1" : "P2",
-                    Math.random() > 0.5 ? "U1" : "U2",
-                    new Date(),
-                    10 + new Random().nextInt(10000));
-            Message<PageEvent> message = MessageBuilder
-                    .withPayload(pageEvent)
-                    .setHeader(KafkaHeaders.KEY, UUID.randomUUID().toString()).build();
-            return message;
-        };
-    }
-
-    @Bean
-    public Function<KStream<String, PageEvent>, KStream<String, Long>> kStreamFunction() {
-        return (input) ->
+    public Function<KStream<String, PageEvent>, KStream<String, Long>> kStream(){
+        return (input)->
                 input
                         //.filter((k,v)->v.duration()>100)
-                        .map((k, v) -> new KeyValue<>(v.name(), (long) v.duration())) // Use org.apache.kafka.streams.KeyValue
+                        .map((k,v)->new KeyValue<>(v.name(), 0L))
                         .groupByKey(Grouped.with(Serdes.String(), Serdes.Long()))
                         .windowedBy(TimeWindows.of(Duration.ofSeconds(5)))
                         .count(Materialized.as("count-store"))
                         .toStream()
-                        .peek((k, v) -> {
-                            System.out.println("=======>  " + k.key());
-                            System.out.println("=======>  " + v);
-                        })
-                        .map((k, v) -> new KeyValue<>(k.key(), v));
+                        .map((k,v)->new KeyValue<>(k.key(), v))
+                ;
     }
 }
